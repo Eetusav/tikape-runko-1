@@ -1,49 +1,58 @@
-package tikape.runko.database;
+/*
+ * To change this license header, choose License Headers in Project Properties.
+ * To change this template file, choose Tools | Templates
+ * and open the template in the editor.
+ */
+package com.mycompany.tikape.forum.daot;
 
+/**
+ *
+ * @author Matti
+ */
 import java.sql.*;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
+import java.util.stream.*;
+public class Database<T> {
 
-public class Database {
+    private boolean debug;
+    private Connection connection;
 
-    private String databaseAddress;
-
-    public Database(String databaseAddress) throws ClassNotFoundException {
-        this.databaseAddress = databaseAddress;
+    public Database(String address) throws Exception {
+        this.connection = DriverManager.getConnection(address);
     }
 
-    public Connection getConnection() throws SQLException {
-        return DriverManager.getConnection(databaseAddress);
+    public void setDebugMode(boolean d) {
+        debug = d;
     }
-
-    public void init() {
-        List<String> lauseet = sqliteLauseet();
-
-        // "try with resources" sulkee resurssin automaattisesti lopuksi
-        try (Connection conn = getConnection()) {
-            Statement st = conn.createStatement();
-
-            // suoritetaan komennot
-            for (String lause : lauseet) {
-                System.out.println("Running command >> " + lause);
-                st.executeUpdate(lause);
-            }
-
-        } catch (Throwable t) {
-            // jos tietokantataulu on jo olemassa, ei komentoja suoriteta
-            System.out.println("Error >> " + t.getMessage());
+    
+    private void debug(ResultSet rs) throws SQLException {
+        int columns = rs.getMetaData().getColumnCount();
+        for (int i = 0; i < columns; i++) {
+            System.out.print(
+                    rs.getObject(i + 1) + ":"
+                    + rs.getMetaData().getColumnName(i + 1) + "  ");
         }
+
+        System.out.println();
     }
 
-    private List<String> sqliteLauseet() {
-        ArrayList<String> lista = new ArrayList<>();
+    public int update(String updateQuery) throws SQLException {
+        Statement stmt = connection.createStatement();
+        int changes = stmt.executeUpdate(updateQuery);
 
-        // tietokantataulujen luomiseen tarvittavat komennot suoritusjärjestyksessä
-        lista.add("CREATE TABLE Opiskelija (id integer PRIMARY KEY, nimi varchar(255));");
-        lista.add("INSERT INTO Opiskelija (nimi) VALUES ('Platon');");
-        lista.add("INSERT INTO Opiskelija (nimi) VALUES ('Aristoteles');");
-        lista.add("INSERT INTO Opiskelija (nimi) VALUES ('Homeros');");
+        if (debug) {
+            System.out.println("---");
+            System.out.println(updateQuery);
+            System.out.println("Changed rows: " + changes);
+            System.out.println("---");
+        }
+        stmt.close();
 
-        return lista;
+        return changes;
     }
+
+    public Connection getConnection() throws SQLException{
+        return this.connection;
+    }
+
 }
